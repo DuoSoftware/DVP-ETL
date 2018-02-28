@@ -85,7 +85,7 @@ class ExternalUserClass():
         # Update the row with the primary keys of each dimension while at the same time inserting new data into
         # each dimension
 
-        self.row['external_users_dim_id'] = external_users_dimension.ensure(self.row)
+        self.row['external_user_id'] = external_users_dimension.ensure(self.row)
         external_users_fact_table.insert(self.row)
 
     def generate_external_user_tables(self):

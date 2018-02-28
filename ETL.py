@@ -6,14 +6,34 @@ from RabbitMQConnection import RabbitMQConnection
 import CDR as cdr
 import Engagements as eng
 import Tickets as tkt
-import TicketEvents as tktEvent
 import ExternalUsers as exuser
 import pygrametl
 import json
 import string
+import ConfigParser
+import logging
 
 
 class ETLClass():
+    @staticmethod
+    def get_conf(filename, section):
+
+        Config = ConfigParser.ConfigParser()
+        Config.optionxform = str  # This makes configparser not to lowercase the keys
+        Config.read(filename)
+
+        dict1 = {}
+        options = Config.options(section)
+        for option in options:
+            try:
+                dict1[option] = Config.get(section, option)
+                if dict1[option] == -1:
+                    print("skip: %s" % option)
+            except Exception:
+                print("exception on %s!" % option)
+                dict1[option] = None
+        return dict1
+
     def __init__(self, queue_name, body, delivery_tag):
         self.json = json.loads(string.replace(body, '\\', ''))
         self.data_type = queue_name
@@ -21,8 +41,8 @@ class ETLClass():
 
     def load_data(self):
 
-        pg_constr = "dbname=DigIn user=duo password=DigIn123 host=35.201.165.0 port=3245"
-        pgconn = psycopg2.connect(pg_constr)
+        pg_constr = ETLClass.get_conf("Config.ini", "Warehouse")
+        pgconn = psycopg2.connect(pg_constr['constr'])
         conn = pygrametl.ConnectionWrapper(connection=pgconn)
         try:
             if self.data_type == "cdr":
@@ -35,10 +55,6 @@ class ETLClass():
                 tkt_json = self.json
                 result = tkt.TicketsClass(tkt_json).generate_ticket_tables()
 
-                tkt_event_arr = self.json["events"]
-                tkt_id = self.json["_id"]
-                result = tktEvent.TicketEventsClass(tkt_event_arr, tkt_id).generate_ticket_event_tables(tkt_event_arr)
-
             elif self.data_type == "external_users":
                 result = exuser.ExternalUserClass(self.json).generate_external_user_tables()
             else:
@@ -48,15 +64,19 @@ class ETLClass():
         except psycopg2.IntegrityError as e:
             conn.rollback()
             return e
+        except KeyError as k:
+            conn.rollback()
+            return k
 
 
 if __name__ == "__main__":
 
-    rmq_host = '35.201.165.0'
-    rmq_user = 'admin'
-    rmq_password = 'DigIn123'
-    rmq_port = 5672
-    rmq_vhost = '/'
+    rmqconf = ETLClass.get_conf("Config.ini", "RabbitMQ")
+    rmq_host = rmqconf['rmq_host']
+    rmq_user = rmqconf['rmq_user']
+    rmq_password = rmqconf['rmq_password']
+    rmq_port = int(rmqconf['rmq_port'])
+    rmq_vhost = rmqconf['rmq_vhost']
 
     rmq = RabbitMQConnection(rmq_host, rmq_user, rmq_password, rmq_port, rmq_vhost)
 
