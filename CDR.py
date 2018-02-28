@@ -70,6 +70,10 @@ class CDRClass():
             created_date_dim_id = None
             bridge_date_dim_id = None
             hangup_date_dim_id = None
+            answer_time_dim_id = None
+            created_time_dim_id = None
+            bridge_time_dim_id = None
+            hangup_time_dim_id = None
             agent_skill = None
             queue_time = None
             extra_data = None
@@ -120,45 +124,54 @@ class CDRClass():
                 answered_time = ETLHelpers.validate_date_epoch(answered_time_stamp)
                 answer_date = answered_time["original_val"]
                 answer_date_dim_id = answered_time["formatted_val"]
+                answer_time_dim_id = answered_time["formatted_time"]
 
                 if answered_time["original_val"]:
                     is_answered = True
             else:
                 answer_date = None
                 answer_date_dim_id = None
+                answer_time_dim_id = None
 
             created_time_stamp = times_sec.get('created_time', None)
             if created_time_stamp is not None and created_time_stamp is not "0":
                 created_time = ETLHelpers.validate_date_epoch(created_time_stamp)
                 created_date = created_time["original_val"]
                 created_date_dim_id = created_time["formatted_val"]
+                created_time_dim_id = created_time["formatted_time"]
 
             elif start_epoch is not None and start_epoch is not "0":
                 created_time = ETLHelpers.validate_date_epoch(start_epoch)
                 created_date = created_time["original_val"]
                 created_date_dim_id = created_time["formatted_val"]
+                created_time_dim_id = created_time["formatted_time"]
 
             else:
                 created_date = None
                 created_date_dim_id = None
+                created_time_dim_id = None
 
             bridged_time_stamp = times_sec.get('bridged_time', None)
             if bridged_time_stamp is not None and bridged_time_stamp is not "0":
                 bridged_time = ETLHelpers.validate_date_epoch(bridged_time_stamp)
                 bridge_date = bridged_time["original_val"]
                 bridge_date_dim_id = bridged_time["formatted_val"]
+                bridge_time_dim_id = bridged_time["formatted_val"]
             else:
                 bridge_date = None
                 bridge_date_dim_id = None
+                bridge_time_dim_id = None
 
             hangup_time_stamp = times_sec.get('hangup_time', None)
             if hangup_time_stamp is not None and hangup_time_stamp is not "0":
                 hangup_time = ETLHelpers.validate_date_epoch(hangup_time_stamp)
                 hangup_date = hangup_time["original_val"]
                 hangup_date_dim_id = hangup_time["formatted_val"]
+                hangup_time_dim_id = hangup_time["formatted_val"]
             else:
                 hangup_date = None
                 hangup_date_dim_id = None
+                hangup_time_dim_id = None
 
             if ards_added_time_stamp:
                 is_queued = True
@@ -215,6 +228,10 @@ class CDRClass():
             self.row["AnsweredTime"] = answer_date
             self.row["BridgedTime"] = bridge_date
             self.row["HangupTime"] = hangup_date
+            self.row["CreatedDateDimId"] = created_date_dim_id
+            self.row["AnsweredDateDimId"] = answer_date_dim_id
+            self.row["BridgedDateDimId"] = bridge_date_dim_id
+            self.row["HangupDateDimId"] = hangup_date_dim_id
             self.row["CreatedTimeDimId"] = created_date_dim_id
             self.row["AnsweredTimeDimId"] = answer_date_dim_id
             self.row["BridgedTimeDimId"] = bridge_date_dim_id
@@ -258,7 +275,8 @@ class CDRClass():
 
         call_fact_table = FactTable(
             name='"FactCall"',
-            keyrefs=['uuid', 'CallUuid', 'BridgeUuid', 'CreatedTimeDimId', 'AnsweredTimeDimId', 'BridgedTimeDimId',
+            keyrefs=['uuid', 'CallUuid', 'BridgeUuid', 'CreatedDateDimId', 'AnsweredDateDimId', 'BridgedDateDimId',
+                     'HangupDateDimId', 'CreatedTimeDimId', 'AnsweredTimeDimId', 'BridgedTimeDimId',
                      'HangupTimeDimId'],
             measures=['CreatedTime', 'AnsweredTime', 'BridgedTime', 'HangupTime', 'BillSec', 'HoldSec', 'ProgressSec',
                       'QueueSec', 'AnswerSec', 'WaitSec', 'ProgressMediaSec', 'FlowBillSec'])

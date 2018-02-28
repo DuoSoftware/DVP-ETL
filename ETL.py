@@ -27,6 +27,7 @@ logger.addHandler(handler)
 logger.info('--------------------------------------  ETL  -----------------------------------------------')
 logger.info('Starting ETL')
 
+
 class ETLClass():
     @staticmethod
     def get_conf(filename, section):
@@ -80,7 +81,7 @@ class ETLClass():
         except KeyError:
             conn.rollback()
             raise
-        except:   
+        except:
             conn.rollback()
             raise
 

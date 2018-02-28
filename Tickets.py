@@ -68,36 +68,44 @@ class TicketsClass():
             created_at = ETLHelpers.validate_date(created_at)
             self.row["created_at"] = created_at["original_val"]
             self.row["created_at_dim_id"] = created_at["formatted_val"]
+            self.row["created_time_dim_id"] = created_at["formatted_time"]
         else:
             self.row["created_at"] = None
             self.row["created_at_dim_id"] = None
+            self.row["created_time_dim_id"] = None
 
         due_at = tkt_json.get("due_at", None)
         if due_at is not None and due_at is not "0":
             due_at = ETLHelpers.validate_date(due_at)
             self.row['due_at'] = due_at["original_val"]
             self.row['due_at_dim_id'] = due_at["formatted_val"]
+            self.row['due_time_dim_id'] = due_at["formatted_time"]
         else:
             self.row["due_at"] = None
             self.row["due_at_dim_id"] = None
+            self.row["due_time_dim_id"] = None
 
         updated_at = tkt_json.get("last_updated", None)
         if updated_at is not None and updated_at is not "0":
             updated_at = ETLHelpers.validate_date(updated_at)
             self.row['updated_at'] = updated_at["original_val"]
             self.row['updated_at_dim_id'] = updated_at["formatted_val"]
+            self.row['updated_time_dim_id'] = updated_at["formatted_time"]
         else:
             self.row["updated_at"] = None
             self.row["updated_at_dim_id"] = None
+            self.row["updated_time_dim_id"] = None
 
         last_status_changed = tkt_json["ticket_matrix"].get("last_status_changed", None)
         if last_status_changed is not None and last_status_changed is not "0":
             last_status_changed = ETLHelpers.validate_date(last_status_changed)
             self.row['last_status_changed'] = last_status_changed["original_val"]
             self.row['last_status_changed_dim_id'] = last_status_changed["formatted_val"]
+            self.row['last_status_changed_time_dim_id'] = last_status_changed["formatted_time"]
         else:
             self.row["last_status_changed"] = None
             self.row["last_status_changed_dim_id"] = None
+            self.row["last_status_changed_time_dim_id"] = None
 
     def load_tickets(self):
         ticket_dimension = Dimension(
@@ -110,7 +118,8 @@ class TicketsClass():
 
         ticket_fact_table = FactTable(
             name='"FactTicket"',
-            keyrefs=['engagement_session_id', 'ticket_id', 'created_at_dim_id', 'updated_at_dim_id', 'due_at_dim_id'],
+            keyrefs=['engagement_session_id', 'ticket_id', 'created_at_dim_id', 'updated_at_dim_id', 'due_at_dim_id',
+                     'created_time_dim_id', 'updated_time_dim_id', 'due_time_dim_id'],
             measures=['created_at', 'updated_at', 'due_at', 'time_estimation', 're_opens', 'waited_time', 'worked_time',
                       'resolution_time'])
 

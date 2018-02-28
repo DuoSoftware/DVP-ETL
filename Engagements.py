@@ -31,18 +31,22 @@ class EngagementClass():
             created_at = ETLHelpers.validate_date(eng_json["created_at"])
             self.row['created_at'] = created_at["original_val"]
             self.row['created_at_dim_id'] = created_at["formatted_val"]
+            self.row['created_time_dim_id'] = created_at["formatted_time"]
         else:
             self.row["created_at"] = None
             self.row["created_at_dim_id"] = None
+            self.row["created_time_dim_id"] = None
 
         updated_at = eng_json.get("updated_at", None)
         if updated_at is not None and updated_at is not "0":
             updated_at = ETLHelpers.validate_date(updated_at)
             self.row['updated_at'] = updated_at["original_val"]
             self.row['updated_at_dim_id'] = updated_at["formatted_val"]
+            self.row['updated_time_dim_id'] = updated_at["formatted_time"]
         else:
             self.row["updated_at"] = None
             self.row["updated_at_dim_id"] = None
+            self.row["updated_time_dim_id"] = None
 
     def load_engagement(self):
         engagement_dimension = Dimension(
@@ -52,7 +56,7 @@ class EngagementClass():
 
         engagement_fact_table = FactTable(
             name='"FactEngagement"',
-            keyrefs=['engagement_id', 'created_at_dim_id', 'updated_at_dim_id'],
+            keyrefs=['engagement_id', 'created_at_dim_id', 'updated_at_dim_id', 'created_time_dim_id', 'updated_time_dim_id'],
             measures=['updated_at', 'created_at'])
 
         self.row['eng_dim_id'] = engagement_dimension.ensure(self.row)

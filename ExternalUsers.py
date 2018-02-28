@@ -54,18 +54,22 @@ class ExternalUserClass():
             created_at = ETLHelpers.validate_date(created_at)
             self.row["created_at"] = created_at["original_val"]
             self.row["created_at_dim_id"] = created_at["formatted_val"]
+            self.row["created_time_dim_id"] = created_at["formatted_time"]
         else:
             self.row["created_at"] = None
             self.row["created_at_dim_id"] = None
+            self.row["created_time_dim_id"] = None
 
         updated_at = exusers_json.get("updated_at", None)
         if updated_at is not None and updated_at is not "0":
             updated_at = ETLHelpers.validate_date(updated_at)
             self.row["updated_at"] = updated_at["original_val"]
             self.row["updated_at_dim_id"] = updated_at["formatted_val"]
+            self.row["updated_time_dim_id"] = updated_at["formatted_time"]
         else:
             self.row["updated_at"] = None
             self.row["updated_at_dim_id"] = None
+            self.row["updated_time_dim_id"] = None
 
     def load_external_users(self):
 
@@ -79,7 +83,7 @@ class ExternalUserClass():
 
         external_users_fact_table = FactTable(
             name='"FactExternalUsers"',
-            keyrefs=['external_user_id', 'created_at_dim_id', 'updated_at_dim_id'],
+            keyrefs=['external_user_id', 'created_at_dim_id', 'updated_at_dim_id', 'created_time_dim_id', 'updated_time_dim_id'],
             measures=['created_at', 'updated_at'])
 
         # Update the row with the primary keys of each dimension while at the same time inserting new data into
