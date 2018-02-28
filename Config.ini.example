@@ -1,0 +1,9 @@
+[RabbitMQ]
+rmq_host = <host>
+rmq_user = <user>
+rmq_password = <password>
+rmq_port = <port>
+rmq_vhost = <virtual-host>
+
+[Warehouse]
+constr = <connection-string>

@@ -13,6 +13,19 @@ import string
 import ConfigParser
 import logging
 
+log_path = 'logs/ETL.log'
+logger = logging.getLogger(__name__)
+logger.setLevel(logging.INFO)
+
+handler = logging.FileHandler(log_path)
+handler.setLevel(logging.INFO)
+
+formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+handler.setFormatter(formatter)
+
+logger.addHandler(handler)
+logger.info('--------------------------------------  ETL  -----------------------------------------------')
+logger.info('Starting ETL')
 
 class ETLClass():
     @staticmethod
@@ -61,12 +74,15 @@ class ETLClass():
                 return
             conn.commit()
             return result
-        except psycopg2.IntegrityError as e:
+        except psycopg2.IntegrityError:
             conn.rollback()
-            return e
-        except KeyError as k:
+            raise
+        except KeyError:
             conn.rollback()
-            return k
+            raise
+        except:   
+            conn.rollback()
+            raise
 
 
 if __name__ == "__main__":
@@ -81,7 +97,12 @@ if __name__ == "__main__":
     rmq = RabbitMQConnection(rmq_host, rmq_user, rmq_password, rmq_port, rmq_vhost)
 
     def callback(queue_name, body, delivery_tag):  # Data to be defined
-        result = ETLClass(queue_name, body, delivery_tag).load_data()
+
+        try:
+            result = ETLClass(queue_name, body, delivery_tag).load_data()
+        except Exception as e:
+            result = None
+            logger.info(e)
 
         if result is psycopg2.IntegrityError:
             rmq.acknowledge_task(delivery_tag)
