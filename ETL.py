@@ -12,6 +12,7 @@ import json
 import string
 import ConfigParser
 import logging
+import sys
 
 log_path = 'logs/ETL.log'
 logger = logging.getLogger(__name__)
@@ -49,7 +50,12 @@ class ETLClass():
         return dict1
 
     def __init__(self, queue_name, body, delivery_tag):
-        self.json = json.loads(string.replace(body, '\\', ''))
+
+        try:
+            self.json = json.loads(string.replace(body, '\\', ''))
+        except ValueError as e:
+            self.json = json.loads(body)
+
         self.data_type = queue_name
         self.delivery_tag = delivery_tag
 
@@ -81,7 +87,7 @@ class ETLClass():
         except KeyError:
             conn.rollback()
             raise
-        except:
+        except Exception:
             conn.rollback()
             raise
 
@@ -98,17 +104,20 @@ if __name__ == "__main__":
     rmq = RabbitMQConnection(rmq_host, rmq_user, rmq_password, rmq_port, rmq_vhost)
 
     def callback(queue_name, body, delivery_tag):  # Data to be defined
+        logger.info("Massage received")
 
         try:
             result = ETLClass(queue_name, body, delivery_tag).load_data()
         except Exception as e:
             result = None
-            logger.info(e)
+            logger.error(sys.exc_info())
 
         if result is psycopg2.IntegrityError:
             rmq.acknowledge_task(delivery_tag)
+            logger.error(sys.exc_info())
         else:
             rmq.acknowledge_task(delivery_tag)
+            logger.info(result)
 
     rmq.register_queues(['cdr', 'engagement', 'tickets', 'external_users'])
     rmq.register_callback(callback)
