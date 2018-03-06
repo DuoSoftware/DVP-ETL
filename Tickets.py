@@ -3,8 +3,6 @@ __version__ = '1.0.0.0'
 
 from Helpers import ETLHelpers
 from pygrametl.tables import Dimension, FactTable
-import psycopg2
-import pygrametl
 
 
 class TicketsClass():
@@ -126,7 +124,7 @@ class TicketsClass():
         # Updates the row with the primary keys of each dimension while at the same time inserting new data into
         # each dimension
 
-        self.row['ticket_dim_id'] = ticket_dimension.ensure(self.row)
+        self.row['ticket_id'] = ticket_dimension.ensure(self.row)
         ticket_fact_table.insert(self.row)
 
     def generate_ticket_tables(self):

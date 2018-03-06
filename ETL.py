@@ -13,6 +13,8 @@ import string
 import ConfigParser
 import logging
 import sys
+import threading
+from multiprocessing import Process
 
 log_path = 'logs/ETL.log'
 logger = logging.getLogger(__name__)
@@ -61,36 +63,19 @@ class ETLClass():
 
     def load_data(self):
 
-        pg_constr = ETLClass.get_conf("Config.ini", "Warehouse")
-        pgconn = psycopg2.connect(pg_constr['constr'])
-        conn = pygrametl.ConnectionWrapper(connection=pgconn)
-        try:
-            if self.data_type == "cdr":
-                result = cdr.CDRClass(self.json).generate_call_tables()
+        if self.data_type == "cdr":
+            result = cdr.CDRClass(self.json).generate_call_tables()
 
-            elif self.data_type == "engagement":
-                result = eng.EngagementClass(self.json).generate_engagement_tables()
+        elif self.data_type == "engagement":
+            result = eng.EngagementClass(self.json).generate_engagement_tables()
 
-            elif self.data_type == "tickets":
-                tkt_json = self.json
-                result = tkt.TicketsClass(tkt_json).generate_ticket_tables()
+        elif self.data_type == "tickets":
+            result = tkt.TicketsClass(self.json).generate_ticket_tables()
 
-            elif self.data_type == "external_users":
-                result = exuser.ExternalUserClass(self.json).generate_external_user_tables()
-            else:
-                return
-            conn.commit()
-            return result
-        except psycopg2.IntegrityError:
-            conn.rollback()
-            raise
-        except KeyError:
-            conn.rollback()
-            raise
-        except Exception:
-            conn.rollback()
-            raise
-
+        elif self.data_type == "external_users":
+            result = exuser.ExternalUserClass(self.json).generate_external_user_tables()
+        else:
+            return
 
 if __name__ == "__main__":
 
@@ -103,16 +88,34 @@ if __name__ == "__main__":
 
     rmq = RabbitMQConnection(rmq_host, rmq_user, rmq_password, rmq_port, rmq_vhost)
 
-    def callback(queue_name, body, delivery_tag):  # Data to be defined
+    pg_constr = ETLClass.get_conf("Config.ini", "Warehouse")
+    pgconn = psycopg2.connect(pg_constr['constr'])
+    conn = pygrametl.ConnectionWrapper(connection=pgconn)
+
+    def callback(queue_name, body, delivery_tag):
         logger.info("Massage received")
 
         try:
-            result = ETLClass(queue_name, body, delivery_tag).load_data()
-        except Exception as e:
-            result = None
-            logger.error(sys.exc_info())
+            result = [threading.Thread(target=ETLClass(queue_name, body, delivery_tag).load_data(), args=())]
+            for t in result:
+                t.start()
 
-        if result is psycopg2.IntegrityError:
+            for t in result:
+                t.join()
+
+            conn.commit()
+
+        except psycopg2.IntegrityError:
+            conn.rollback()
+            rmq.acknowledge_task(delivery_tag)
+            logger.error(sys.exc_info())
+            raise
+        except KeyError:
+            conn.rollback()
+            rmq.acknowledge_task(delivery_tag)
+            raise
+        except Exception:
+            conn.rollback()
             rmq.acknowledge_task(delivery_tag)
             logger.error(sys.exc_info())
         else:
