@@ -10,6 +10,15 @@ class CDRClass():
     def __init__(self, json):
         self.cdr_json = json
         self.row = {}
+        self.row2 = {}
+        self.originatedLegs = []
+        self.uuid = None
+        self.call_uuid = None
+        self.is_transfer_leg = False
+        self.direction = None
+        self.op_cat = None
+        self.originatedLegsList = None
+        self.member_uuid = None
 
     def extract_and_transform_cdr(self):
 
@@ -20,20 +29,20 @@ class CDRClass():
             times_sec = call_flow_sec[0].get('times',None)
             caller_profile_sec = call_flow_sec[0].get('caller_profile', None)
             action_cat = var_sec.get('DVP_ACTION_CAT', None)
-            op_cat = var_sec.get('DVP_OPERATION_CAT', None)
+            self.op_cat = var_sec.get('DVP_OPERATION_CAT', None)
             adv_op_action = var_sec.get('DVP_ADVANCED_OP_ACTION', None)
             ards_added_time_stamp = var_sec.get('ards_added', None)
             queue_left_time_stamp = var_sec.get('ards_queue_left', None)
             ards_routed_time_stamp = var_sec.get('ards_routed', None)
             ards_resource_name = var_sec.get('ards_resource_name', None)
             ards_sip_name = var_sec.get('ARDS-SIP-Name', None)
-            uuid = var_sec.get('uuid', None)
-            call_uuid = var_sec.get('call_uuid', None)
-            is_transfer_leg = var_sec.get('IsTransferLeg', None)
+            self.uuid = var_sec.get('uuid', None)
+            self.call_uuid = var_sec.get('call_uuid', None)
+            self.is_transfer_leg = var_sec.get('IsTransferLeg', False)
             bridge_uuid = var_sec.get('bridge_uuid', None)
             sip_to_user = caller_profile_sec.get('destination_number', None)
             sip_from_user = caller_profile_sec.get('caller_id_number', None)
-            direction = var_sec.get('direction', None)
+            self.direction = var_sec.get('direction', None)
             dvp_call_direction = var_sec.get('DVP_CALL_DIRECTION', None)
             campaign_id = var_sec.get('CampaignId', None)
             campaign_name = var_sec.get('campaignname', None)
@@ -55,14 +64,15 @@ class CDRClass():
             is_answered = False
             current_app = var_sec.get('current_application', None)
             conf_name = var_sec.get('DVP_CONFERENCE_NAME', None)
-            member_uuid = var_sec.get('memberuuid', None)
+            self.member_uuid = var_sec.get('memberuuid', None)
             conference_uuid = var_sec.get('conference_uuid', None)
             start_epoch = var_sec.get('start_epoch', None)
             hangup_cause = var_sec.get('hangup_cause', None)
             switch_name = self.cdr_json.get('switchname', None)
             caller_context = caller_profile_sec.get('context', None)
+            # member_uuid = caller_profile_sec.get('memberuuid', None)
             sip_hangup_disposition = var_sec.get('sip_hangup_disposition', None)
-            originated_legs = var_sec.get('originated_legs', None)
+            OriginatedLegs = var_sec.get('originated_legs', None)
             agent_skill = None
             queue_time = None
             extra_data = None
@@ -74,22 +84,22 @@ class CDRClass():
                 sip_resource = ards_sip_name
 
             if action_cat == 'DIALER':
-                if op_cat == 'AGENT':
+                if self.op_cat == 'AGENT':
                     sip_from_user = var_sec['sip_to_user']
                     sip_resource = var_sec['sip_to_user']
                     sip_to_user = var_sec['sip_from_user']
                 elif (adv_op_action == 'BLAST' or adv_op_action == 'DIRECT' or adv_op_action =='IVRCALLBACK') and \
-                                op_cat == 'CUSTOMER':
+                                self.op_cat == 'CUSTOMER':
 
                     # NEED TO IMPLEMENT by FaceTone
                     sip_from_user = var_sec['origination_caller_id_number']
                     sip_to_user = var_sec['sip_to_user']
 
-            elif direction == 'inbound' and dvp_call_direction == 'inbound':
+            elif self.direction == 'inbound' and dvp_call_direction == 'inbound':
                 sip_from_user = var_sec['sip_from_user']  # get sip_from_user as from user for all inbound direction
                 # calls
 
-            if not sip_to_user or (action_cat == 'FORWARDING' and direction == 'inbound'):
+            if not sip_to_user or (action_cat == 'FORWARDING' and self.direction == 'inbound'):
                 sip_to_user = urllib.unquote(var_sec['sip_to_user']).decode('utf8')
 
             if not sip_from_user:
@@ -98,11 +108,11 @@ class CDRClass():
             if not sip_to_user:
                 sip_to_user = urllib.unquote(var_sec['dialed_user']).decode('utf8')
 
-            if member_uuid:
-                call_uuid = member_uuid
+            if self.member_uuid:
+                self.call_uuid = self.member_uuid
 
             if conference_uuid:
-                call_uuid = conference_uuid
+                self.call_uuid = conference_uuid
 
                 sip_from_user = urllib.unquote(sip_from_user).decode('utf8')
 
@@ -201,15 +211,36 @@ class CDRClass():
             if action_cat == 'DIALER' and adv_op_action:
                 obj_type = adv_op_action
 
-            self.row["uuid"] = uuid
-            self.row["CallUuid"] = call_uuid
+            # Decode orginated legs
+            if OriginatedLegs:
+                decodedLegsStr = urllib.unquote(OriginatedLegs).decode('utf8')
+                formattedStr = decodedLegsStr.replace("ARRAY::", "")
+                self.originatedLegs = formattedStr.split("|:")
+                legProperties = []
+                leg_array = []
+
+                for i in range(len(self.originatedLegs)):
+                    leg = self.originatedLegs[i].split(";")[0]
+                    if self.uuid != leg and leg not in leg_array:
+                        leg_array.append(leg)
+                        legProperties.append(self.originatedLegs[i].split(";")[0])
+                        legProperties.append(",")
+                self.originatedLegsList = ''.join(map(str, legProperties))
+
+            else:
+                self.originatedLegsList = None
+
+            self.row["uuid"] = self.uuid
+            self.row["CallUuid"] = self.call_uuid
+            self.row["MemberUuid"] = self.member_uuid
             self.row["BridgeUuid"] = bridge_uuid
             self.row["SipFromUser"] = sip_from_user
             self.row["SipToUser"] = sip_to_user
             self.row["HangupCause"] = hangup_cause
-            self.row["Direction"] = direction
+            self.row["Direction"] = self.direction
             self.row["SwitchName"] = switch_name
             self.row["CallerContext"] = caller_context
+            self.row["IsTransferLeg"] = self.is_transfer_leg
             self.row["IsAnswered"] = is_answered
             self.row["CreatedTime"] = created_date
             self.row["AnsweredTime"] = answer_date
@@ -233,13 +264,13 @@ class CDRClass():
             self.row["ProgressMediaSec"] = progress_media_sec
             self.row["FlowBillSec"] = flow_bill_sec
             self.row["ObjClass"] = 'CDR'
-            self.row["ObjType"] = op_cat
+            self.row["ObjType"] = self.op_cat
             self.row["ObjCategory"] = 'DEFAULT'
             self.row["CompanyId"] = company_id
             self.row["TenantId"] = tenant_id
             self.row["AppId"] = app_id
             self.row["AgentSkill"] = agent_skill
-            self.row["OriginatedLegs"] = originated_legs
+            self.row["OriginatedLegs"] = self.originatedLegsList
             self.row["DVPCallDirection"] = dvp_call_direction
             self.row["HangupDisposition"] = sip_hangup_disposition
             self.row["AgentAnswered"] = is_agent_answered
@@ -250,13 +281,31 @@ class CDRClass():
             self.row["BusinessUnit"] = b_unit
             self.row["ExtraData"] = extra_data
 
+    def load_originated_legs(self):
+
+        self.row2["uuid"] = self.uuid
+        self.row2["CallUuid"] = self.call_uuid
+        self.row2["MemberUuid"] = self.member_uuid
+        self.row2["IsTransferLeg"] = self.is_transfer_leg
+        self.row2["Direction"] = self.direction
+        self.row2["ObjType"] = self.op_cat
+        self.row2["originated_leg"] = self.originatedLegsList
+
+        originated_legs_dimension = Dimension(
+            name='"DimOriginatedLegs"',
+            key='uuid',
+            attributes=['CallUuid', 'Direction', 'MemberUuid', 'originated_leg', 'IsTransferLeg', 'ObjType'])
+
+        self.row2['uuid'] = originated_legs_dimension.ensure(self.row2)
+
     def load_cdr(self):
+
         call_dimension = Dimension(
             name='"DimCall"',
             key='uuid',
-            attributes=["SipFromUser", 'SipToUser', 'HangupCause', 'Direction', 'SwitchName', 'CallerContext',
+            attributes=['SipFromUser', 'SipToUser', 'HangupCause', 'Direction', 'SwitchName', 'CallerContext',
                         'IsAnswered',  'Duration',  'ObjClass', 'ObjType', 'ObjCategory', 'CompanyId', 'TenantId',
-                        'AppId', 'AgentSkill', 'OriginatedLegs', 'DVPCallDirection', 'HangupDisposition',
+                        'AppId', 'AgentSkill', 'OriginatedLegs', 'IsTransferLeg', 'DVPCallDirection', 'HangupDisposition',
                         'AgentAnswered', 'IsQueued', 'SipResource', 'BusinessUnit', 'CampaignId', 'CampaignName',
                         'ExtraData'])
 
@@ -272,5 +321,8 @@ class CDRClass():
         call_fact_table.insert(self.row)
 
     def generate_call_tables(self):
+
         self.extract_and_transform_cdr()
+        self.load_originated_legs()
         self.load_cdr()
+

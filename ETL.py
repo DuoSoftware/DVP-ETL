@@ -3,7 +3,7 @@ __version__ = '1.0.0.0'
 
 import psycopg2
 from RabbitMQConnection import RabbitMQConnection
-import CDR as cdr
+import CDR_Extended as cdr
 import Engagements as eng
 import Tickets as tkt
 import ExternalUsers as exuser
@@ -105,16 +105,17 @@ if __name__ == "__main__":
 
             conn.commit()
 
-        except psycopg2.IntegrityError:
+        except psycopg2.IntegrityError as e:
             conn.rollback()
+            print e
             rmq.acknowledge_task(delivery_tag)
             logger.error(sys.exc_info())
-            raise
         except KeyError:
             conn.rollback()
             rmq.acknowledge_task(delivery_tag)
-            raise
-        except Exception:
+            logger.error(sys.exc_info())
+        except Exception as e:
+            print e
             conn.rollback()
             rmq.acknowledge_task(delivery_tag)
             logger.error(sys.exc_info())

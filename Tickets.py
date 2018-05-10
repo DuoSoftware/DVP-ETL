@@ -83,7 +83,7 @@ class TicketsClass():
             self.row["due_at_dim_id"] = None
             self.row["due_time_dim_id"] = None
 
-        updated_at = tkt_json.get("last_updated", None)
+        updated_at = tkt_json.get("updated_at", None)
         if updated_at is not None and updated_at is not "0":
             updated_at = ETLHelpers.validate_date(updated_at)
             self.row['updated_at'] = updated_at["original_val"]

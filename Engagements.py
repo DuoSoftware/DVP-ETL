@@ -20,7 +20,7 @@ class EngagementClass():
         self.row['company'] = eng_json.get("company", None)
         self.row['has_profile'] = eng_json.get("has_profile", None)
         self.row['tenant'] = eng_json.get("tenant", None)
-        self.row['notes'] = eng_json.get("notes", None)
+        self.row['notes'] = ''.join(map(str, eng_json.get("notes", None)))
         self.row['channel'] = eng_json.get("channel", None)
 
     def transform_engagement(self):

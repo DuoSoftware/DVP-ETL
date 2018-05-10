@@ -28,9 +28,9 @@ class ExternalUserClass():
         self.row["email"] = exusers_json.get("email", None)
         self.row["company"] = exusers_json.get("company", None)
         self.row["tenant"] = exusers_json.get("tenant", None)
-        self.row["custom_fields"] = exusers_json.get("custom_fields", None)
-        self.row["tags"] = exusers_json.get("tags", None)
-        self.row["contacts"] = exusers_json.get("contacts", None)
+        self.row["custom_fields"] =  ''.join(map(str, exusers_json.get("custom_fields", None)))
+        self.row["tags"] = ''.join(map(str, exusers_json.get("tags", None)))
+        self.row["contacts"] =  ''.join(map(str, exusers_json.get("contacts", None)))
         self.row["email"] = exusers_json.get("email", None)
         self.row["landnumber"] = exusers_json.get("landnumber", None)
         self.row["facebook"] = exusers_json.get("facebook", None)
@@ -85,9 +85,6 @@ class ExternalUserClass():
             name='"FactExternalUsers"',
             keyrefs=['external_user_id', 'created_at_dim_id', 'updated_at_dim_id', 'created_time_dim_id', 'updated_time_dim_id'],
             measures=['created_at', 'updated_at'])
-
-        # Update the row with the primary keys of each dimension while at the same time inserting new data into
-        # each dimension
 
         self.row['external_user_id'] = external_users_dimension.ensure(self.row)
         external_users_fact_table.insert(self.row)
