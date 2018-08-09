@@ -48,7 +48,7 @@ class RabbitMQConnection(object):
 
         if len(self.queues) > 0:
             for q in self.queues:
-                self.channel.queue_declare(queue=q)
+                self.channel.queue_declare(queue=q, durable=True)
                 self.channel.basic_consume(self.__callback, queue=q)
         else:
             raise ValueError("Queue list must contain atleast one queue.")

@@ -1,5 +1,5 @@
 __author__ = 'Surani Matharaarachchi'
-__version__ = '1.0.0.0'
+__version__ = '1.0.1.0'
 
 import psycopg2
 from RabbitMQConnection import RabbitMQConnection
@@ -63,16 +63,16 @@ class ETLClass():
 
     def load_data(self):
 
-        if self.data_type == "cdr":
+        if self.data_type == "DigInCDRs":
             result = cdr.CDRClass(self.json).generate_call_tables()
 
-        elif self.data_type == "engagement":
+        elif self.data_type == "DigInEngagements":
             result = eng.EngagementClass(self.json).generate_engagement_tables()
 
-        elif self.data_type == "tickets":
+        elif self.data_type == "DigInTickets":
             result = tkt.TicketsClass(self.json).generate_ticket_tables()
 
-        elif self.data_type == "external_users":
+        elif self.data_type == "DigInExternalUsers":
             result = exuser.ExternalUserClass(self.json).generate_external_user_tables()
         else:
             return
@@ -123,6 +123,6 @@ if __name__ == "__main__":
             rmq.acknowledge_task(delivery_tag)
             logger.info(result)
 
-    rmq.register_queues(['cdr', 'engagement', 'tickets', 'external_users'])
+    rmq.register_queues(['DigInCDRs', 'DigInEngagements', 'DigInTickets', 'DigInExternalUsers'])
     rmq.register_callback(callback)
     rmq.start_client()

@@ -1,5 +1,5 @@
 __author__ = 'Surani Matharaarachchi'
-__version__ = '1.0.0.0'
+__version__ = '1.0.1.0'
 
 import urllib
 from Helpers import ETLHelpers
@@ -296,7 +296,13 @@ class CDRClass():
             key='uuid',
             attributes=['CallUuid', 'Direction', 'MemberUuid', 'originated_leg', 'IsTransferLeg', 'ObjType'])
 
+        originated_legs_dimension_temp = Dimension(
+            name='"DimOriginatedLegsTemp"',
+            key='uuid',
+            attributes=['CallUuid', 'Direction', 'MemberUuid', 'originated_leg', 'IsTransferLeg', 'ObjType'])
+
         self.row2['uuid'] = originated_legs_dimension.ensure(self.row2)
+        self.row2['uuid'] = originated_legs_dimension_temp.ensure(self.row2)
 
     def load_cdr(self):
 
@@ -304,7 +310,7 @@ class CDRClass():
             name='"DimCall"',
             key='uuid',
             attributes=['SipFromUser', 'SipToUser', 'HangupCause', 'Direction', 'SwitchName', 'CallerContext',
-                        'IsAnswered',  'Duration',  'ObjClass', 'ObjType', 'ObjCategory', 'CompanyId', 'TenantId',
+                        'IsAnswered',  'Duration',  'ObjClass', 'ObjType', 'ObjCategory',
                         'AppId', 'AgentSkill', 'OriginatedLegs', 'IsTransferLeg', 'DVPCallDirection', 'HangupDisposition',
                         'AgentAnswered', 'IsQueued', 'SipResource', 'BusinessUnit', 'CampaignId', 'CampaignName',
                         'ExtraData'])
@@ -313,12 +319,32 @@ class CDRClass():
             name='"FactCall"',
             keyrefs=['uuid', 'CallUuid', 'BridgeUuid', 'CreatedDateDimId', 'AnsweredDateDimId', 'BridgedDateDimId',
                      'HangupDateDimId', 'CreatedTimeDimId', 'AnsweredTimeDimId', 'BridgedTimeDimId',
-                     'HangupTimeDimId'],
+                     'HangupTimeDimId', 'CompanyId', 'TenantId'],
+            measures=['CreatedTime', 'AnsweredTime', 'BridgedTime', 'HangupTime', 'BillSec', 'HoldSec', 'ProgressSec',
+                      'QueueSec', 'AnswerSec', 'WaitSec', 'ProgressMediaSec', 'FlowBillSec'])
+
+        call_dimension_temp = Dimension(
+            name='"DimCallTemp"',
+            key='uuid',
+            attributes=['SipFromUser', 'SipToUser', 'HangupCause', 'Direction', 'SwitchName', 'CallerContext',
+                        'IsAnswered', 'Duration', 'ObjClass', 'ObjType', 'ObjCategory',
+                        'AppId', 'AgentSkill', 'OriginatedLegs', 'IsTransferLeg', 'DVPCallDirection',
+                        'HangupDisposition',
+                        'AgentAnswered', 'IsQueued', 'SipResource', 'BusinessUnit', 'CampaignId', 'CampaignName',
+                        'ExtraData'])
+
+        call_fact_table_temp = FactTable(
+            name='"FactCallTemp"',
+            keyrefs=['uuid', 'CallUuid', 'BridgeUuid', 'CreatedDateDimId', 'AnsweredDateDimId', 'BridgedDateDimId',
+                     'HangupDateDimId', 'CreatedTimeDimId', 'AnsweredTimeDimId', 'BridgedTimeDimId',
+                     'HangupTimeDimId', 'CompanyId', 'TenantId'],
             measures=['CreatedTime', 'AnsweredTime', 'BridgedTime', 'HangupTime', 'BillSec', 'HoldSec', 'ProgressSec',
                       'QueueSec', 'AnswerSec', 'WaitSec', 'ProgressMediaSec', 'FlowBillSec'])
 
         self.row['uuid'] = call_dimension.ensure(self.row)
         call_fact_table.insert(self.row)
+        self.row['uuid'] = call_dimension_temp.ensure(self.row)
+        call_fact_table_temp.insert(self.row)
 
     def generate_call_tables(self):
 
