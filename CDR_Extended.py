@@ -153,7 +153,7 @@ class CDRClass():
                 bridged_time = ETLHelpers.validate_date_epoch(bridged_time_stamp)
                 bridge_date = bridged_time["original_val"]
                 bridge_date_dim_id = bridged_time["formatted_val"]
-                bridge_time_dim_id = bridged_time["formatted_val"]
+                bridge_time_dim_id = bridged_time["formatted_time"]
             else:
                 bridge_date = None
                 bridge_date_dim_id = None
@@ -164,7 +164,7 @@ class CDRClass():
                 hangup_time = ETLHelpers.validate_date_epoch(hangup_time_stamp)
                 hangup_date = hangup_time["original_val"]
                 hangup_date_dim_id = hangup_time["formatted_val"]
-                hangup_time_dim_id = hangup_time["formatted_val"]
+                hangup_time_dim_id = hangup_time["formatted_time"]
             else:
                 hangup_date = None
                 hangup_date_dim_id = None

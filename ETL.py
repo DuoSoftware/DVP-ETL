@@ -123,6 +123,20 @@ if __name__ == "__main__":
             rmq.acknowledge_task(delivery_tag)
             logger.info(result)
 
-    rmq.register_queues(['DigInCDRs', 'DigInEngagements', 'DigInTickets', 'DigInExternalUsers'])
-    rmq.register_callback(callback)
-    rmq.start_client()
+
+    def get_data_from_queues():
+        rmq.register_queues(['DigInCDRs', 'DigInEngagements', 'DigInTickets', 'DigInExternalUsers'])
+        rmq.register_callback(callback)
+        rmq.start_client()
+
+    try:
+        result = [threading.Thread(target=get_data_from_queues(), args=())]
+        for t in result:
+            t.start()
+
+        for t in result:
+            t.join()
+
+    except Exception as e:
+        print e
+        logger.error(sys.exc_info())
