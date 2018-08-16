@@ -14,7 +14,7 @@ import ConfigParser
 import logging
 import sys
 import threading
-from multiprocessing import Process
+import os
 
 log_path = 'logs/ETL.log'
 logger = logging.getLogger(__name__)
@@ -80,16 +80,16 @@ class ETLClass():
 if __name__ == "__main__":
 
     rmqconf = ETLClass.get_conf("Config.ini", "RabbitMQ")
-    rmq_host = rmqconf['rmq_host']
-    rmq_user = rmqconf['rmq_user']
-    rmq_password = rmqconf['rmq_password']
-    rmq_port = int(rmqconf['rmq_port'])
-    rmq_vhost = rmqconf['rmq_vhost']
+    rmq_host = os.environ[rmqconf['rmq_host']]
+    rmq_user = os.environ[rmqconf['rmq_user']]
+    rmq_password = os.environ[rmqconf['rmq_password']]
+    rmq_port = int(os.environ[rmqconf['rmq_port']])
+    rmq_vhost = os.environ[rmqconf['rmq_vhost']]
 
     rmq = RabbitMQConnection(rmq_host, rmq_user, rmq_password, rmq_port, rmq_vhost)
 
     pg_constr = ETLClass.get_conf("Config.ini", "Warehouse")
-    pgconn = psycopg2.connect(pg_constr['constr'])
+    pgconn = psycopg2.connect(os.environ[pg_constr['constr']])
     conn = pygrametl.ConnectionWrapper(connection=pgconn)
 
     def callback(queue_name, body, delivery_tag):
