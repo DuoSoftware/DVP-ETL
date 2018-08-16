@@ -14,7 +14,7 @@ import ConfigParser
 import logging
 import sys
 import threading
-import os
+from multiprocessing import Process
 
 log_path = 'logs/ETL.log'
 logger = logging.getLogger(__name__)
@@ -80,63 +80,46 @@ class ETLClass():
 if __name__ == "__main__":
 
     rmqconf = ETLClass.get_conf("Config.ini", "RabbitMQ")
-    rmq_host = os.environ[rmqconf['rmq_host']]
-    rmq_user = os.environ[rmqconf['rmq_user']]
-    rmq_password = os.environ[rmqconf['rmq_password']]
-    rmq_port = int(os.environ[rmqconf['rmq_port']])
-    rmq_vhost = os.environ[rmqconf['rmq_vhost']]
+    rmq_host = rmqconf['rmq_host']
+    rmq_user = rmqconf['rmq_user']
+    rmq_password = rmqconf['rmq_password']
+    rmq_port = int(rmqconf['rmq_port'])
+    rmq_vhost = rmqconf['rmq_vhost']
 
     rmq = RabbitMQConnection(rmq_host, rmq_user, rmq_password, rmq_port, rmq_vhost)
 
     pg_constr = ETLClass.get_conf("Config.ini", "Warehouse")
-    pgconn = psycopg2.connect(os.environ[pg_constr['constr']])
+    pgconn = psycopg2.connect(pg_constr['constr'])
     conn = pygrametl.ConnectionWrapper(connection=pgconn)
 
     def callback(queue_name, body, delivery_tag):
         logger.info("Massage received")
+        call_etl(queue_name, body, delivery_tag)
+        rmq.acknowledge_task(delivery_tag)
 
+    def call_etl(queue_name, body, delivery_tag):
         try:
-            result = [threading.Thread(target=ETLClass(queue_name, body, delivery_tag).load_data(), args=())]
-            for t in result:
-                t.start()
-
-            for t in result:
-                t.join()
-
+            # conn = pygrametl.ConnectionWrapper(connection=pgconn)
+            t = ETLClass(queue_name, body, delivery_tag).load_data()
             conn.commit()
 
         except psycopg2.IntegrityError as e:
             conn.rollback()
             print e
-            rmq.acknowledge_task(delivery_tag)
             logger.error(sys.exc_info())
-        except KeyError:
+        except KeyError as e:
+            print e
             conn.rollback()
-            rmq.acknowledge_task(delivery_tag)
             logger.error(sys.exc_info())
         except Exception as e:
             print e
             conn.rollback()
-            rmq.acknowledge_task(delivery_tag)
             logger.error(sys.exc_info())
         else:
-            rmq.acknowledge_task(delivery_tag)
-            logger.info(result)
+            logger.info(t)
 
+    # rmq.register_queues(['tickets'])
+    rmq.register_queues(['DigInCDRs', 'DigInEngagements', 'DigInTickets', 'DigInExternalUsers'])
+    rmq.register_callback(callback)
+    rmq.start_client()
 
-    def get_data_from_queues():
-        rmq.register_queues(['DigInCDRs', 'DigInEngagements', 'DigInTickets', 'DigInExternalUsers'])
-        rmq.register_callback(callback)
-        rmq.start_client()
-
-    try:
-        result = [threading.Thread(target=get_data_from_queues(), args=())]
-        for t in result:
-            t.start()
-
-        for t in result:
-            t.join()
-
-    except Exception as e:
-        print e
-        logger.error(sys.exc_info())
