@@ -15,8 +15,13 @@ import logging
 import sys
 import os
 
-os.makedirs('logs')
 log_path = 'logs/ETL.log'
+try:
+    os.makedirs('logs')
+except OSError:
+    if not os.path.isdir('logs'):
+        raise
+
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
 
