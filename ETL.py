@@ -3,7 +3,7 @@ __version__ = '1.0.1.0'
 
 import psycopg2
 from RabbitMQConnection import RabbitMQConnection
-import CDR_Extended as cdr
+import CDR as cdr
 import Engagements as eng
 import Tickets as tkt
 import ExternalUsers as exuser
@@ -60,6 +60,7 @@ class ETLClass():
 
         try:
             self.json = json.loads(string.replace(body, '\\', ''))
+        # todo: Handle other types of Exceptions
         except ValueError as e:
             self.json = json.loads(body)
 
@@ -99,15 +100,10 @@ if __name__ == "__main__":
 
     def callback(queue_name, body, delivery_tag):
         logger.info("Massage received")
-        call_etl(queue_name, body, delivery_tag)
-        rmq.acknowledge_task(delivery_tag)
-
-    def call_etl(queue_name, body, delivery_tag):
         try:
-            # conn = pygrametl.ConnectionWrapper(connection=pgconn)
-            t = ETLClass(queue_name, body, delivery_tag).load_data()
+            result = ETLClass(queue_name, body, delivery_tag).load_data()
             conn.commit()
-
+        # todo: Handle other types of Exceptions
         except psycopg2.IntegrityError as e:
             conn.rollback()
             print e
@@ -121,7 +117,8 @@ if __name__ == "__main__":
             conn.rollback()
             logger.error(sys.exc_info())
         else:
-            logger.info(t)
+            logger.info(result)
+        rmq.acknowledge_task(delivery_tag)
 
     # rmq.register_queues(['tickets'])
     rmq.register_queues(['DigInCDRs', 'DigInEngagements', 'DigInTickets', 'DigInExternalUsers'])
